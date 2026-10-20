@@ -1,0 +1,19 @@
+[package]
+name = "shrinkr"
+version = "0.1.0"
+description = "Bilder offline komprimieren, skalieren und konvertieren"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+urlencoding = "2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
