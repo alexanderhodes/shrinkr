@@ -3,6 +3,7 @@ import type { Preset, VariantSettings } from "./types";
 const PRESETS_KEY = "shrinkr.presets.v1";
 const LAST_KEY = "shrinkr.lastSettings.v1";
 const OUTDIR_KEY = "shrinkr.outputDir.v1";
+const SESSION_KEY = "shrinkr.session.v1";
 
 export const DEFAULT_SETTINGS: VariantSettings = {
   width: 1600,
@@ -55,4 +56,19 @@ export function loadOutputDir(): string | null {
 
 export function saveOutputDir(dir: string | null): void {
   write(OUTDIR_KEY, dir);
+}
+
+/** Zuletzt geladene Bilder (nur Pfade und Varianten-Einstellungen, keine Bilddaten). */
+export interface SavedImage {
+  path: string;
+  name: string;
+  variants: { settings: VariantSettings; suffix: string }[];
+}
+
+export function loadSession(): SavedImage[] {
+  return read<SavedImage[]>(SESSION_KEY) ?? [];
+}
+
+export function saveSession(items: SavedImage[]): void {
+  write(SESSION_KEY, items);
 }

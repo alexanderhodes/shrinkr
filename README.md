@@ -13,6 +13,7 @@ die Bildverarbeitung steckt als WebAssembly (mozjpeg, libwebp, libavif, oxipng, 
 - Größe vorher/nachher live, inklusive Vorschau und Ersparnis in Prozent
 - **Presets**: Einstellungen speichern (z. B. „1600 × auto · WebP“). Mit „Automatisch“ bekommt jedes neue Bild die Variante von selbst
 - Export neben das Original oder in einen gewählten Ausgabeordner
+- Die zuletzt geladenen Bilder (samt Varianten) kommen beim nächsten Start wieder, solange die Originaldateien noch am selben Ort liegen. „Leeren“ löscht die gemerkte Sitzung
 - EXIF-Drehung wird berücksichtigt, Transparenz wird bei JPEG auf Weiß gelegt
 
 ## Starten

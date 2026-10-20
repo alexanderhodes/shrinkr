@@ -20,9 +20,11 @@ import {
   loadLastSettings,
   loadOutputDir,
   loadPresets,
+  loadSession,
   saveLastSettings,
   saveOutputDir,
   savePresets,
+  saveSession,
 } from "./lib/storage";
 import {
   downloadBlob,
@@ -41,6 +43,8 @@ interface IncomingFile {
   name: string;
   blob: Blob;
   path?: string;
+  /** Gespeicherter Zustand aus der letzten Sitzung */
+  restore?: { name: string; variants: { settings: VariantSettings; suffix: string }[] };
 }
 
 const uid = () => crypto.randomUUID();
@@ -88,7 +92,7 @@ export default function App() {
         const { base, ext } = splitName(f.name);
         const image: SourceImage = {
           id: uid(),
-          name: base,
+          name: f.restore?.name ?? base,
           formatLabel: formatLabelFromExt(ext),
           path: f.path,
           blob: f.blob,
@@ -102,7 +106,9 @@ export default function App() {
           const dims = await probeImage(f.blob);
           image.width = dims.width;
           image.height = dims.height;
-          image.variants = autoSettings.map((p) => newVariant(p));
+          image.variants = f.restore
+            ? f.restore.variants.map((v) => newVariant(v.settings, v.suffix))
+            : autoSettings.map((p) => newVariant(p));
         } catch (e) {
           image.error = e instanceof Error ? e.message : "Bild konnte nicht gelesen werden.";
         }
@@ -173,6 +179,54 @@ export default function App() {
       window.removeEventListener("drop", drop);
     };
   }, [desktop, addFromPaths, addFromFileList]);
+
+  // Letzte Sitzung wiederherstellen (nur in der Desktop-App, dort sind die Dateipfade bekannt).
+  const restoreStarted = useRef(false);
+  const [restored, setRestored] = useState(!desktop);
+  useEffect(() => {
+    if (!desktop || restoreStarted.current) return;
+    restoreStarted.current = true;
+    void (async () => {
+      const saved = loadSession();
+      const results = await Promise.all(
+        saved.map(async (s): Promise<IncomingFile | null> => {
+          try {
+            const name = baseName(s.path);
+            const bytes = await readFile(s.path);
+            return {
+              name,
+              path: s.path,
+              blob: new Blob([bytes], { type: mimeFromExt(splitName(name).ext) }),
+              restore: { name: s.name, variants: s.variants },
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const incoming = results.filter((r): r is IncomingFile => r !== null);
+      const missing = results.length - incoming.length;
+      if (incoming.length > 0) await addIncoming(incoming);
+      if (missing > 0) {
+        setNotice({ text: `${missing} ${missing === 1 ? "Bild" : "Bilder"} aus der letzten Sitzung nicht mehr gefunden.` });
+      }
+      setRestored(true);
+    })();
+  }, [desktop, addIncoming]);
+
+  // Sitzung speichern, sobald sich Bilder oder Varianten ändern.
+  useEffect(() => {
+    if (!restored) return;
+    saveSession(
+      images
+        .filter((i) => i.path && !i.error)
+        .map((i) => ({
+          path: i.path as string,
+          name: i.name,
+          variants: i.variants.map((v) => ({ settings: v.settings, suffix: v.suffix })),
+        })),
+    );
+  }, [images, restored]);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const chooseFiles = async () => {
